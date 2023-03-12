@@ -1,0 +1,97 @@
+  
+name: msys CI
+
+on: 
+  release:
+    types: [published]
+  schedule:
+    - cron: 00 20 * * *
+  watch:
+    types: [started]
+
+jobs:
+  build-package:
+    runs-on: ubuntu-latest
+    name: Build on ubuntu
+    if: github.event.repository.owner.id == github.event.sender.id
+    env:
+      RCLONE_CONF:  ${{ secrets.RCLONE_CONF }}
+      ZIP_PASSWD:   ${{ secrets.ZIP_PASSWD }}
+      ZIP_COMMENT:    ${{ secrets.ZIP_COMMENT }}
+      DEPLOY_PATH:  ${{ secrets.DEPLOY_PATH }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - name: Submodule Update
+      env:
+        GH_TOKEN: ${{ secrets.GH_PA_TOKEN }}
+        BM_FILES: ${{ secrets.BM_FILES }}
+      run: |
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git config --global diff.ignoreSubmodules dirty
+        .ci/ci-submod.sh auto
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Refresh access token
+      id: refresh
+      run: |
+        sudo apt install rclone zip -y
+        RCLONE_CONFIG_PATH=$(rclone config file | tail -n1)
+        mkdir -pv $(dirname ${RCLONE_CONFIG_PATH})
+        [ $(awk 'END{print NR}' <<< "${RCLONE_CONF}") == 1 ] &&
+        base64 --decode <<< "${RCLONE_CONF}" > ${RCLONE_CONFIG_PATH} ||
+        printf "${RCLONE_CONF}" > ${RCLONE_CONFIG_PATH}
+        REMOTES=($(rclone listremotes))
+        for remote in ${REMOTES[@]}; do
+        rclone lsd ${remote} &>/dev/null
+        done
+        rm -f rclone.config.zip
+        zip -z -P "${ZIP_PASSWD}" -j rclone.config.zip ${RCLONE_CONFIG_PATH} << EOF
+        ${ZIP_COMMENT}
+        .
+        EOF
+        [ -f rclone.config.zip ] && {
+        rclone copy rclone.config.zip ${DEPLOY_PATH}
+        }
+        RCLONE_CONFIG_NEW=$(base64 ${RCLONE_CONFIG_PATH} | tr '\n' '\0')
+        echo ::set-output name=rclone_config::${RCLONE_CONFIG_NEW}
+        echo ::add-mask::${RCLONE_CONFIG_NEW}
+        rm -vf ${RCLONE_CONFIG_PATH}{,.gpg}
+    - name: Update Rclone Config secret
+      uses: atomlong/gh-update-secret@submod
+      if: ${{ steps.refresh.outputs.rclone_config != '' }}
+      with:
+        name: RCLONE_CONF
+        value: ${{ steps.refresh.outputs.rclone_config }}
+        pa_token: ${{ secrets.GH_PA_TOKEN }}
+    - name: Enable Action Workflows
+      id: enwf
+      run: |
+        sudo apt install jq -y
+        TOKEN=${{ secrets.GH_PA_TOKEN }}
+        REPOS=($(git config --file .gitmodules --get-regexp url | sed -rn "s#^submodule\.\S+\s+https?://github.com/(.*)(\.git|$)#\1#p"))
+        for repo in ${REPOS[@]}; do
+        workflow_urls=($( while [ -z "${RES}" ]; do
+                RES=$(curl --silent -H "Authorization: token $TOKEN" \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    https://api.github.com/repos/${repo}/actions/workflows 2>/dev/null)
+                done
+                echo "${RES}" | jq ".workflows[] | {url}" | grep -Po '^\s*"url":\s*"\K[^"]+'))
+        echo "Enable action workflows of ${repo} ..."
+        for wf_url in ${workflow_urls[@]}; do
+        printf "[id=${wf_url##*/}]"
+        while ! curl --silent --show-error --fail \
+            -X PUT \
+            -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            ${wf_url}/enable 2>/dev/null; do :; done
+        echo "Done"
+        done
+        done
+    
