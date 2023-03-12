@@ -1,3 +1,6 @@
 [submodule "eyun-keyring"]
 	path = eyun-keyring
 	url = https://github.com/atomlong/eyun-keyring.git
+[submodule "rclone-bin"]
+	path = rclone-bin
+	url = https://github.com/atomlong/rclone-bin.git
