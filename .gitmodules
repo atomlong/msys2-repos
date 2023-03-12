@@ -1,0 +1,3 @@
+[submodule "eyun-keyring"]
+	path = eyun-keyring
+	url = https://github.com/atomlong/eyun-keyring.git
