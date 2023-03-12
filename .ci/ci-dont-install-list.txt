@@ -1,2 +1,0 @@
-msys2-runtime
-bash
