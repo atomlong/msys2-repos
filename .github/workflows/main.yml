@@ -60,8 +60,8 @@ jobs:
         rclone copy rclone.config.zip ${DEPLOY_PATH}
         }
         RCLONE_CONFIG_NEW=$(base64 ${RCLONE_CONFIG_PATH} | tr '\n' '\0')
-        echo ::set-output name=rclone_config::${RCLONE_CONFIG_NEW}
         echo ::add-mask::${RCLONE_CONFIG_NEW}
+        echo "rclone_config=${RCLONE_CONFIG_NEW}" >>$GITHUB_OUTPUT
         rm -vf ${RCLONE_CONFIG_PATH}{,.gpg}
     - name: Update Rclone Config secret
       uses: atomlong/gh-update-secret@submod
