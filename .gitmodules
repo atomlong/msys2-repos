@@ -5,3 +5,6 @@
 	path = rclone-bin
 	url = https://github.com/atomlong/rclone-bin.git
 	branch = msys2
+[submodule "oniguruma"]
+	path = oniguruma
+	url = https://github.com/atomlong/oniguruma.git
