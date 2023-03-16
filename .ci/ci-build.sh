@@ -83,20 +83,6 @@ _list_changes() {
 	_as_list "${list_name}" "${filter}" "${strip}" "$(git log "${git_options[@]}" ${commit_sha}.. | sort -u)"
 }
 
-# log git sha for the current build
-_create_build_marker() {
-	local branch_url="$(git remote get-url origin | sed 's/\.git$//')/tree/${CI_BRANCH}"
-	local marker="build.marker"
-	
-	_lock_file "${marker}"
-	rclone lsf "${PKG_DEPLOY_PATH}/${marker}" &>/dev/null && while ! rclone copy "${PKG_DEPLOY_PATH}/${marker}" . &>/dev/null; do :; done || touch "${marker}"
-	grep -Pq "\[[[:xdigit:]]+\]${branch_url}\s*$" ${marker} && \
-	sed -i -r "s|^(\[)[[:xdigit:]]+(\]${branch_url}\s*)$|\1${CI_COMMIT}\2|g" "${marker}" || \
-	echo "[${CI_COMMIT}]${branch_url}" >> "${marker}"
-	rclone move "${marker}" "${PKG_DEPLOY_PATH}"
-	_release_file "${marker}"
-}
-
 # Get package information
 _package_info() {
     local package="${1}"
@@ -143,7 +129,7 @@ _last_package_hash()
 {
 local package="${1}"
 local marker="build.marker"
-rclone cat "${PKG_DEPLOY_PATH}/${marker}" 2>/dev/null | sed -rn "s|^\[([[:xdigit:]]+)\]${package}\s*$|\1|p"
+rclone cat "${PKG_DEPLOY_PATH}/${marker}" 2>/dev/null | sed -rn "s|^\[([[:xdigit:]]+)\]${PACMAN_REPO}/${package}\s*$|\1|p"
 return 0
 }
 
@@ -151,7 +137,7 @@ return 0
 _now_package_hash()
 {
 local package="${1}"
-git log --pretty=format:'%H' -1 ${package} 2>/dev/null
+git -C ${package} log --pretty=format:'%H' -1 2>/dev/null
 return 0
 }
 
@@ -167,9 +153,18 @@ commit_sha="$(_now_package_hash ${package})"
 rclone lsf "${PKG_DEPLOY_PATH}/${marker}" &>/dev/null && while ! rclone copy "${PKG_DEPLOY_PATH}/${marker}" . &>/dev/null; do :; done || touch "${marker}"
 grep -Pq "\[[[:xdigit:]]+\]${package}\s*$" ${marker} && \
 sed -i -r "s|^(\[)[[:xdigit:]]+(\]${package}\s*)$|\1${commit_sha}\2|g" "${marker}" || \
-echo "[${commit_sha}]${package}" >> "${marker}"
+echo "[${commit_sha}]${PACMAN_REPO}/${package}" >> "${marker}"
 rclone move "${marker}" "${PKG_DEPLOY_PATH}"
 _release_file "${marker}"
+return 0
+}
+
+# Function: Sign one file.
+_create_signature()
+{
+[ -n "${PGP_KEY_PASSWD}" ] || { echo "You must set PGP_KEY_PASSWD firstly."; return 1; }
+local pkg=${1}
+[ -f ${pkg} ] && gpg --pinentry-mode loopback --passphrase "${PGP_KEY_PASSWD}" -o "${pkg}.sig" -b "${pkg}"
 return 0
 }
 
@@ -241,25 +236,16 @@ done
 # Function: Sign one or more pkgballs.
 create_package_signature()
 {
-[ -n "${PGP_KEY_PASSWD}" ] || { echo "You must set PGP_KEY_PASSWD firstly."; return 1; } 
 local pkg
 # signature for distrib packages.
-(ls ${PKG_ARTIFACTS_PATH}/${package}/*${PKGEXT} &>/dev/null) && {
-pushd ${PKG_ARTIFACTS_PATH}/${package}
-for pkg in *${PKGEXT}; do
-gpg --pinentry-mode loopback --passphrase "${PGP_KEY_PASSWD}" -o "${pkg}.sig" -b "${pkg}"
+for pkg in $(ls ${PKG_ARTIFACTS_PATH}/*${PKGEXT}); do
+_create_signature ${pkg}
 done
-popd
-}
 
 # signature for source packages.
-(ls ${SRC_ARTIFACTS_PATH}/${package}/*${SRCEXT} &>/dev/null) && {
-pushd ${SRC_ARTIFACTS_PATH}/${package}
-for pkg in *${SRCEXT}; do
-gpg --pinentry-mode loopback --passphrase "${PGP_KEY_PASSWD}" -o "${pkg}.sig" -b "${pkg}"
+for pkg in $(ls ${SRC_ARTIFACTS_PATH}/*${SRCEXT}); do
+_create_signature ${pkg}
 done
-popd
-}
 
 return 0
 }
@@ -368,6 +354,7 @@ local old_pkgs pkg file
 
 _lock_file "${PACMAN_REPO}.db"
 
+echo "Adding package information to datdabase ..."
 pushd ${PKG_ARTIFACTS_PATH}/${package}
 export PKG_FILES=(${PKG_FILES[@]} $(ls *${PKGEXT}))
 for file in ${PACMAN_REPO}.{db,files}{,.tar.xz}{,.old}; do
@@ -375,6 +362,12 @@ rclone lsf ${PKG_DEPLOY_PATH}/${file} &>/dev/null || continue
 while ! rclone copy ${PKG_DEPLOY_PATH}/${file} ${PWD}; do :; done
 done
 old_pkgs=($(repo-add "${PACMAN_REPO}.db.tar.xz" *${PKGEXT} | tee /dev/stderr | grep -Po "\bRemoving existing entry '\K[^']+(?=')" || true))
+
+echo "Generating database signature ..."
+_create_signature ${PACMAN_REPO}.db
+popd
+
+echo "Tring to delete old files on remote server ..."
 for pkg in ${old_pkgs[@]}; do
 for file in ${pkg}-{${PACMAN_ARCH},any}.pkg.tar.{xz,zst}{,.sig}; do
 rclone delete ${PKG_DEPLOY_PATH}/${file} 2>/dev/null || true
@@ -384,14 +377,14 @@ rclone delete ${SRC_DEPLOY_PATH}/${file} 2>/dev/null || true
 done
 done
 
+echo "Uploading new files to remote server ..."
 rclone move ${PKG_ARTIFACTS_PATH}/${package} ${PKG_DEPLOY_PATH} --copy-links --delete-empty-src-dirs
 
 (ls ${SRC_ARTIFACTS_PATH}/${package}/*${SRCEXT} &>/dev/null) && 
 rclone move ${SRC_ARTIFACTS_PATH}/${package} ${SRC_DEPLOY_PATH} --copy-links --delete-empty-src-dirs
 
-popd
-_record_package_hash "${package}"
 _release_file "${PACMAN_REPO}.db"
+_record_package_hash "${package}"
 }
 
 # create mail message
@@ -415,9 +408,6 @@ done
 
 [ -n "${message}" ] && {
 message=${message}"<p>Architecture: ${PACMAN_ARCH}</p>"
-# message=${message}"<p>Build Number: ${CI_BUILD_NUMBER}</p>"
-
-# echo ::set-output name=message::${message}
 
 # Send mail
 cat > mail.txt << EOF
@@ -481,7 +471,11 @@ _release_file "build.config"
 [ -z "${MAIL_USERNAME}" ] && { echo "Environment variable 'MAIL_USERNAME' is required."; exit 1; }
 [ -z "${MAIL_PASSWD}" ] && { echo "Environment variable 'MAIL_PASSWD' is required."; exit 1; }
 [ -z "${MAIL_TO}" ] && { echo "Environment variable 'MAIL_TO' is required."; exit 1; }
-[ -z "${CUSTOM_REPOS}" ] || add_custom_repos
+[ -z "${CUSTOM_REPOS}" ] || {
+CUSTOM_REPOS=$(sed -e 's/$arch\b/\\$arch/g' -e 's/$repo\b/\\$repo/g' <<< ${CUSTOM_REPOS})
+[[ ${CUSTOM_REPOS} =~ '$' ]] && eval export CUSTOM_REPOS=${CUSTOM_REPOS}
+add_custom_repos
+}
 import_pgp_seckey
 
 PKG_DEPLOY_PATH=${DEPLOY_PATH%% *}
@@ -537,7 +531,6 @@ execute 'Building packages' build_package
 execute "Generating package signature" create_package_signature
 execute "Deploying artifacts" deploy_artifacts
 done
-_create_build_marker
 create_mail_message
 [ -z "${FAILED_PKGS}" ] && success 'All packages built successfully'
 popd
