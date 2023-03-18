@@ -1,3 +1,6 @@
+[submodule "cv2pdb"]
+	path = cv2pdb
+	url = https://github.com/atomlong/cv2pdb.git
 [submodule "eyun-keyring"]
 	path = eyun-keyring
 	url = https://github.com/atomlong/eyun-keyring.git
