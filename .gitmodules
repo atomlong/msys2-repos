@@ -17,6 +17,9 @@
 [submodule "git-for-windows"]
 	path = git-for-windows
 	url = https://github.com/atomlong/git-for-windows.git
+[submodule "git-lfs"]
+	path = git-lfs
+	url = https://github.com/atomlong/git-lfs.git
 [submodule "jq"]
 	path = jq
 	url = https://github.com/atomlong/jq.git
