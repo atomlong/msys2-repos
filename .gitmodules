@@ -11,6 +11,9 @@
 [submodule "oniguruma"]
 	path = oniguruma
 	url = https://github.com/atomlong/oniguruma.git
+[submodule "fastgithub-bin"]
+	path = fastgithub-bin
+	url = https://github.com/atomlong/fastgithub-bin.git
 [submodule "git-credential-manager"]
 	path = git-credential-manager
 	url = https://github.com/atomlong/git-credential-manager.git
