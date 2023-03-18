@@ -8,6 +8,9 @@
 [submodule "oniguruma"]
 	path = oniguruma
 	url = https://github.com/atomlong/oniguruma.git
+[submodule "git-credential-manager"]
+	path = git-credential-manager
+	url = https://github.com/atomlong/git-credential-manager.git
 [submodule "git-for-windows"]
 	path = git-for-windows
 	url = https://github.com/atomlong/git-for-windows.git
