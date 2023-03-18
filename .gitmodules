@@ -20,6 +20,9 @@
 [submodule "git-lfs"]
 	path = git-lfs
 	url = https://github.com/atomlong/git-lfs.git
+[submodule "git-sizer"]
+	path = git-sizer
+	url = https://github.com/atomlong/git-sizer.git
 [submodule "jq"]
 	path = jq
 	url = https://github.com/atomlong/jq.git
