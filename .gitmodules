@@ -26,3 +26,6 @@
 [submodule "jq"]
 	path = jq
 	url = https://github.com/atomlong/jq.git
+[submodule "wintoast"]
+	path = wintoast
+	url = https://github.com/atomlong/wintoast.git
