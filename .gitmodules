@@ -1,3 +1,6 @@
+[submodule "crosstool-ng-git"]
+	path = crosstool-ng-git
+	url = https://github.com/atomlong/crosstool-ng-git.git
 [submodule "cv2pdb"]
 	path = cv2pdb
 	url = https://github.com/atomlong/cv2pdb.git
