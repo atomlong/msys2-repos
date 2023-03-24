@@ -10,6 +10,9 @@
 [submodule "rclone-bin"]
 	path = rclone-bin
 	url = https://github.com/atomlong/rclone-bin.git
+[submodule "nssm"]
+	path = nssm
+	url = https://github.com/atomlong/nssm.git
 [submodule "oniguruma"]
 	path = oniguruma
 	url = https://github.com/atomlong/oniguruma.git
