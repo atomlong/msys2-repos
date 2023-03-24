@@ -238,12 +238,12 @@ create_package_signature()
 {
 local pkg
 # signature for distrib packages.
-for pkg in $(ls ${PKG_ARTIFACTS_PATH}/*${PKGEXT}); do
+for pkg in $(ls ${PKG_ARTIFACTS_PATH}/${package}/*${PKGEXT}); do
 _create_signature ${pkg}
 done
 
 # signature for source packages.
-for pkg in $(ls ${SRC_ARTIFACTS_PATH}/*${SRCEXT}); do
+for pkg in $(ls ${SRC_ARTIFACTS_PATH}/${package}/*${SRCEXT}); do
 _create_signature ${pkg}
 done
 
@@ -290,37 +290,16 @@ build_package()
 [ -n "${PKG_ARTIFACTS_PATH}" ] || { echo "You must set PKG_ARTIFACTS_PATH firstly."; return 1; }
 [ -n "${SRC_ARTIFACTS_PATH}" ] || { echo "You must set SRC_ARTIFACTS_PATH firstly."; return 1; }
 local depends makedepends arch buildarch
-unset PKGEXT SRCEXT
+unset PKGEXTSRCEXT
 
 rm -rf ${PKG_ARTIFACTS_PATH}/${package}
 rm -rf ${SRC_ARTIFACTS_PATH}/${package}
 
-_package_info "${package}" depends{,_${PACMAN_ARCH}} makedepends{,_${PACMAN_ARCH}} arch buildarch PKGEXT SRCEXT
-[ -n "${PKGEXT}" ] || PKGEXT=$(grep -Po "^PKGEXT=('|\")?\K[^'\"]+" /etc/makepkg.conf)
-export PKGEXT=${PKGEXT}
-[ -n "${SRCEXT}" ] || SRCEXT=$(grep -Po "^SRCEXT=('|\")?\K[^'\"]+" /etc/makepkg.conf)
-export SRCEXT=${SRCEXT}
-
-[ "${arch}" == "any" ] || {
-[ -n "${buildarch}" ] && {
-[ "$((buildarch & 1<<0))" == "$((1<<0))" ] && arch=(${arch[@]} 'i686' 'x86_64' 'arm' 'armv6h' 'armv7h' 'aarch64')
-[ "$((buildarch & 1<<1))" == "$((1<<1))" ] && arch=(${arch[@]} 'arm')
-[ "$((buildarch & 1<<2))" == "$((1<<2))" ] && arch=(${arch[@]} 'armv7h')
-[ "$((buildarch & 1<<3))" == "$((1<<3))" ] && arch=(${arch[@]} 'aarch64')
-[ "$((buildarch & 1<<4))" == "$((1<<4))" ] && arch=(${arch[@]} 'armv6h')
-true
-} || {
-arch=(${arch[@]} "${PACMAN_ARCH}")
-}
-}
-arch=($(tr ' ' '\n' <<< ${arch[@]} | sort -u))
-
-[ "${arch}" == "any" ] || grep -Pq "\b${PACMAN_ARCH}\b" <<< ${arch[@]} || { echo "The package '${package}' will not build for architecture '${PACMAN_ARCH}'"; return 0; }
-
 [ "$(_last_package_hash ${package})" == "$(_now_package_hash ${package})" ] && { echo "The package '${package}' has beed built, skip."; return 0; }
+[ -n "${PKGEXT}" ] || PKGEXT=$(grep -Po "^PKGEXT=('|\")?\K[^'\"]+" /etc/makepkg.conf)
+[ -n "${SRCEXT}" ] || SRCEXT=$(grep -Po "^SRCEXT=('|\")?\K[^'\"]+" /etc/makepkg.conf)
 
 pushd "${package}"
-sed -i -r "s|^(arch=\()[^)]+(\))|\1${arch[*]}\2|" PKGBUILD
 _lock_file "pacman_sync"
 pacman --sync --refresh --noconfirm --disable-download-timeout
 _release_file "pacman_sync"
@@ -425,7 +404,7 @@ curl --url "smtps://${MAIL_HOST}:${MAIL_PORT}" \
 	--mail-from "${MAIL_USERNAME}" \
 	--mail-rcpt "${MAIL_TO}" \
 	--upload-file mail.txt \
-	--user "${MAIL_USERNAME}:${MAIL_PASSWD}" \
+	--user "${MAIL_USERNAME}:${MAIL_PASSWORD}" \
 	--insecure
 rm -f mail.txt
 }
@@ -469,7 +448,7 @@ _release_file "build.config"
 [ -z "${MAIL_HOST}" ] && { echo "Environment variable 'MAIL_HOST' is required."; exit 1; }
 [ -z "${MAIL_PORT}" ] && { echo "Environment variable 'MAIL_PORT' is required."; exit 1; }
 [ -z "${MAIL_USERNAME}" ] && { echo "Environment variable 'MAIL_USERNAME' is required."; exit 1; }
-[ -z "${MAIL_PASSWD}" ] && { echo "Environment variable 'MAIL_PASSWD' is required."; exit 1; }
+[ -z "${MAIL_PASSWORD}" ] && { echo "Environment variable 'MAIL_PASSWORD' is required."; exit 1; }
 [ -z "${MAIL_TO}" ] && { echo "Environment variable 'MAIL_TO' is required."; exit 1; }
 [ -z "${CUSTOM_REPOS}" ] || {
 CUSTOM_REPOS=$(sed -e 's/$arch\b/\\$arch/g' -e 's/$repo\b/\\$repo/g' <<< ${CUSTOM_REPOS})
