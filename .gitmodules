@@ -31,6 +31,9 @@
 [submodule "git-sizer"]
 	path = git-sizer
 	url = https://github.com/atomlong/git-sizer.git
+[submodule "go-bin"]
+	path = go-bin
+	url = https://github.com/atomlong/go-bin.git
 [submodule "gsudo"]
 	path = gsudo
 	url = https://github.com/atomlong/gsudo.git
