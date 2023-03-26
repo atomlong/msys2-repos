@@ -10,6 +10,9 @@
 [submodule "rclone-bin"]
 	path = rclone-bin
 	url = https://github.com/atomlong/rclone-bin.git
+[submodule "linux-command-gpt-git"]
+	path = linux-command-gpt-git
+	url = https://github.com/atomlong/linux-command-gpt-git.git
 [submodule "nssm"]
 	path = nssm
 	url = https://github.com/atomlong/nssm.git
