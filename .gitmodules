@@ -43,6 +43,9 @@
 [submodule "jq"]
 	path = jq
 	url = https://github.com/atomlong/jq.git
+[submodule "terminal-gpt-git"]
+	path = terminal-gpt-git
+	url = https://github.com/atomlong/terminal-gpt-git.git
 [submodule "wintoast"]
 	path = wintoast
 	url = https://github.com/atomlong/wintoast.git
