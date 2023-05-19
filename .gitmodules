@@ -49,3 +49,6 @@
 [submodule "wintoast"]
 	path = wintoast
 	url = https://github.com/atomlong/wintoast.git
+[submodule "repo"]
+	path = repo
+	url = https://github.com/atomlong/repo.git
