@@ -55,3 +55,6 @@
 [submodule "mailcap"]
 	path = mailcap
 	url = https://github.com/atomlong/mailcap.git
+[submodule "github-cli-bin"]
+	path = github-cli-bin
+	url = https://github.com/atomlong/github-cli-bin.git
