@@ -52,3 +52,6 @@
 [submodule "repo"]
 	path = repo
 	url = https://github.com/atomlong/repo.git
+[submodule "mailcap"]
+	path = mailcap
+	url = https://github.com/atomlong/mailcap.git
