@@ -399,13 +399,13 @@ ${message}
 Bye!
 EOF
 
-curl --url "smtps://${MAIL_HOST}:${MAIL_PORT}" \
-	--ssl-reqd  \
-	--mail-from "${MAIL_USERNAME}" \
-	--mail-rcpt "${MAIL_TO}" \
-	--upload-file mail.txt \
-	--user "${MAIL_USERNAME}:${MAIL_PASSWORD}" \
-	--insecure
+curl --url "smtp://${MAIL_HOST}:${MAIL_PORT}" \
+ --ssl-reqd  \
+ --mail-from "${MAIL_USERNAME}" \
+ --mail-rcpt "${MAIL_TO}" \
+ --upload-file mail.txt \
+ --user "${MAIL_USERNAME}:${MAIL_PASSWORD}" \
+ --insecure
 rm -f mail.txt
 }
 
