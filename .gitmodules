@@ -58,3 +58,6 @@
 [submodule "github-cli-bin"]
 	path = github-cli-bin
 	url = https://github.com/atomlong/github-cli-bin.git
+[submodule "cygn-keyring"]
+	path = cygn-keyring
+	url = https://github.com/atomlong/cygn-keyring.git
