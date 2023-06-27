@@ -61,3 +61,6 @@
 [submodule "cygn-keyring"]
 	path = cygn-keyring
 	url = https://github.com/atomlong/cygn-keyring.git
+[submodule "minisign"]
+	path = minisign
+	url = https://github.com/atomlong/minisign.git
