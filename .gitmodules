@@ -64,3 +64,6 @@
 [submodule "minisign"]
 	path = minisign
 	url = https://github.com/atomlong/minisign.git
+[submodule "apr-util"]
+	path = apr-util
+	url = https://github.com/atomlong/apr-util.git
