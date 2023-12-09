@@ -67,3 +67,6 @@
 [submodule "apr-util"]
 	path = apr-util
 	url = https://github.com/atomlong/apr-util.git
+[submodule "patchelf"]
+	path = patchelf
+	url = https://github.com/atomlong/patchelf.git
